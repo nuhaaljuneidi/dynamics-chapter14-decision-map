@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chapter 14 — Force, Mass, and Acceleration — Tree</title>
+<style>
+  :root{
+    --navy:#002855; --gold:#c99400; --goldbg:#fff6de;
+    --blue:#0f5fae; --bluebg:#eaf2fb;
+    --orange:#b5501c; --orangebg:#fdf1e6;
+    --purple:#5b3a91; --purplebg:#f2ecfa;
+    --ink:#14213a; --gray:#5f7084; --line:#8a96a8; --page:#f3f5f8; --topgold:#ffcc00;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--page);color:var(--ink);font-family:Arial,Helvetica,system-ui,sans-serif}
+  header{background:var(--navy);color:#fff;padding:18px clamp(14px,3vw,36px);border-top:6px solid var(--topgold)}
+  header h1{margin:0;font-size:clamp(18px,2.6vw,26px);font-weight:700}
+  header p{margin:5px 0 0;color:#cfe0ef;font-size:13.5px}
+  header .book{float:right;font-size:11.5px;font-style:italic;color:#a9cbd0}
+
+  .legend{display:flex;flex-wrap:wrap;gap:16px;justify-content:center;background:#fff;border-bottom:1px solid #dfe4ea;
+          padding:8px 14px;font-size:12px;color:var(--gray);position:sticky;top:0;z-index:50}
+  .legend .sw{display:inline-flex;align-items:center;gap:6px;font-weight:700}
+  .legend .dot{width:12px;height:12px;border-radius:3px;display:inline-block}
+
+  #stage{position:relative;max-width:1900px;margin:0 auto;padding:0 16px 10px}
+  svg#connectors{position:absolute;left:0;top:0;width:100%;height:100%;z-index:0;pointer-events:none;overflow:visible}
+  svg#connectors path{fill:none;stroke:var(--line);stroke-width:2}
+
+  /* every tree depth is its own independent, full-width row: a wide subtree below
+     never widens or shifts the levels above it */
+  .level{position:relative;z-index:1;display:flex;flex-direction:row;justify-content:center;
+         align-items:flex-start;gap:20px;flex-wrap:wrap;width:100%;margin-top:34px}
+  .level:first-of-type{margin-top:26px}
+
+  .coord-children{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;width:100%;
+                  max-width:1100px;margin:34px auto 0;position:relative;z-index:1}
+  .coord-children .node{width:100%;min-width:0}
+
+  .node{
+    position:relative;z-index:1;background:#fff;border-radius:10px;border:2px solid var(--navy);
+    padding:11px 14px;box-shadow:0 2px 6px rgba(0,20,50,.08);
+  }
+  .node, .node *{overflow-wrap:anywhere}
+  .node.root{width:360px;text-align:center}
+  .node.l1{width:320px}
+  .node.parent2{width:320px;text-align:center}
+  .node.leafwide{width:320px}
+
+  .node .t{font-weight:700;font-size:13px;color:var(--navy);margin:0 0 2px}
+  .node .sub{font-size:10.5px;color:var(--gray);font-style:italic;margin:0 0 6px}
+  .node .method{font-size:10.5px;font-weight:700;color:var(--ink);margin:4px 0 2px}
+  .node .f{font-size:12px;margin:3px 0;line-height:1.45}
+  .node .note{font-size:10px;color:var(--gray);margin-top:5px;line-height:1.4}
+  .node hr{border:none;border-top:1px dashed #d7dce3;margin:7px 0}
+  .vec{font-weight:700}
+  sub, sup{font-size:75%}
+
+  .node details{margin-top:5px}
+  .node summary{cursor:pointer;font-size:10.5px;font-weight:700;color:var(--blue);list-style:none;user-select:none}
+  .node summary::-webkit-details-marker{display:none}
+  .node summary::before{content:"▸ ";display:inline-block;transition:transform .1s}
+  .node details[open] summary::before{content:"▾ "}
+  .node details > *:not(summary){margin-top:4px}
+
+  .node.system{border-color:var(--purple);background:var(--purplebg)}
+  .node.system .t{color:var(--purple)}
+  .node.cartesian{border-color:var(--blue);background:var(--bluebg)}
+  .node.cartesian .t{color:var(--blue)}
+  .node.normtan{border-color:var(--orange);background:var(--orangebg)}
+  .node.normtan .t{color:var(--orange)}
+  .node.polar{border-color:var(--gold);background:var(--goldbg)}
+  .node.polar .t{color:#8a6d00}
+
+  footer.guidance{
+    max-width:900px;margin:36px auto 50px;padding:14px 20px;background:#fff;
+    border:2px solid var(--navy);border-radius:10px;font-size:12.5px;line-height:1.55;
+  }
+  footer.guidance .t{font-weight:700;color:var(--navy);font-size:13.5px;margin-bottom:6px}
+
+  @media (max-width:1000px) and (min-width:761px){
+    .coord-children{grid-template-columns:repeat(2,minmax(0,1fr))}
+  }
+
+  /* ---------------- mobile: depth-indented rail tree ---------------- */
+  @media (max-width:760px){
+    .level, .coord-children{
+      display:flex;flex-direction:column;align-items:stretch;flex-wrap:nowrap;gap:0;width:auto;margin-top:0;
+    }
+    #stage{padding:0 12px}
+    svg#connectors{display:none}
+    .node{width:auto !important;margin:10px 0;position:relative}
+    .level[data-depth="1"], .level[data-depth="2"], .coord-children{
+      border-left:3px solid var(--line);
+    }
+    .level[data-depth="1"]{margin-left:16px;padding-left:14px}
+    .level[data-depth="2"]{margin-left:32px;padding-left:14px}
+    .coord-children{margin-left:48px;padding-left:14px}
+
+    .node[data-depth]{position:relative}
+    .node[data-depth]:not([data-depth="0"])::before{
+      content:"";position:absolute;left:-14px;top:22px;width:14px;height:2px;background:var(--line);
+    }
+  }
+
+  @media print{
+    .legend{position:static}
+    .node details{display:block}
+    .node details summary{display:none}
+    .node details > *{display:block !important}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="book">Bedford &amp; Fowler — Chapter 14, Force, Mass, and Acceleration</span>
+  <h1>Chapter 14 — Force, Mass, and Acceleration: Decision Map</h1>
+  <p>Applying Newton's Second Law — one particle, or a system of particles?</p>
+</header>
+
+<div class="legend">
+  <span class="sw"><i class="dot" style="background:var(--navy)"></i>General selection</span>
+  <span class="sw"><i class="dot" style="background:var(--blue)"></i>Cartesian coordinates</span>
+  <span class="sw"><i class="dot" style="background:var(--orange)"></i>Normal &amp; tangential</span>
+  <span class="sw"><i class="dot" style="background:var(--gold)"></i>Polar &amp; cylindrical</span>
+  <span class="sw"><i class="dot" style="background:var(--purple)"></i>System of particles</span>
+</div>
+
+<div id="stage">
+<svg id="connectors"></svg>
+
+  <!-- LEVEL 0: root -->
+  <div class="level">
+    <div class="node root" data-depth="0" id="n-root">
+      <div class="t">Newton's Second Law — §14.1</div>
+      <div class="f"><span class="vec">ΣF</span> = m<span class="vec">a</span></div>
+      <div class="sub">One particle, or a system of particles?</div>
+    </div>
+  </div>
+
+  <!-- LEVEL 1: System of Particles (leaf) / One Particle (parent) -->
+  <div class="level" data-depth="1">
+    <div class="node l1 system" data-depth="1" data-parent="n-root" id="n-system">
+      <div class="t">System of Particles — §14.1</div>
+      <div class="f"><span class="vec">ΣF</span> = Σmᵢ<span class="vec">a</span>ᵢ = m<span class="vec">a</span><sub>G</sub></div>
+      <div class="sub">m = Σmᵢ&nbsp; (G = mass center)</div>
+      <details>
+        <summary>Details</summary>
+        <div class="note">Newton's Third Law: internal action–reaction forces between particles in the system cancel in pairs — only external forces contribute to ΣF.</div>
+        <div class="note">Treat connected masses (coupled cars, blocks in contact) as one effective particle at G, or isolate each mass with its own free-body and kinetic diagram.</div>
+      </details>
+    </div>
+
+    <div class="node l1 parent2" data-depth="1" data-parent="n-root" id="n-one">
+      <div class="t">One Particle</div>
+      <div class="sub">ΣF = ma for a single particle</div>
+      <details>
+        <summary>Details</summary>
+        <div class="note">Newton's First Law: if ΣF = 0, the particle is in equilibrium (a = 0) — a static or constant-velocity case.</div>
+      </details>
+    </div>
+  </div>
+
+  <!-- LEVEL 2: which coordinate system -->
+  <div class="level" data-depth="2">
+    <div class="node parent2" data-depth="2" data-parent="n-one" id="n-coord">
+      <div class="t">Which coordinate system fits the motion?</div>
+      <div class="sub">Free-body diagram = kinetic diagram, resolved the same way</div>
+    </div>
+  </div>
+
+  <!-- LEVEL 3: three coordinate leaves -->
+  <div class="coord-children" data-depth="3">
+    <div class="node leafwide cartesian" data-depth="3" data-parent="n-coord" id="n-cart">
+      <div class="t">Cartesian Coordinates — §14.2</div>
+      <div class="f">ΣFx = max</div>
+      <div class="f">ΣFy = ma_y</div>
+      <div class="f">ΣFz = maz</div>
+      <details>
+        <summary>Details</summary>
+        <div class="note">Simplest when forces and acceleration are naturally described along fixed x,y,z axes — including straight-line (1-D) motion.</div>
+        <hr>
+        <div class="method">Procedure:</div>
+        <div class="f">1. Free-body diagram (all forces).</div>
+        <div class="f">2. Kinetic diagram (ma, same components).</div>
+        <div class="f">3. Solve ΣF = ma component by component.</div>
+      </details>
+    </div>
+
+    <div class="node leafwide normtan" data-depth="3" data-parent="n-coord" id="n-nt">
+      <div class="t">Normal &amp; Tangential Components — §14.3</div>
+      <div class="f">ΣFt = mat</div>
+      <div class="f">ΣFn = man = mv²/ρ</div>
+      <details>
+        <summary>Details</summary>
+        <div class="note">Useful when the path's curvature is known and you're tracking speed change (a_t) separately from direction change (a_n).</div>
+        <div class="note">a_n always points toward the concave side of the path (center of curvature).</div>
+      </details>
+    </div>
+
+    <div class="node leafwide polar" data-depth="3" data-parent="n-coord" id="n-polar">
+      <div class="t">Polar &amp; Cylindrical Coordinates — §14.4</div>
+      <div class="f">ΣFr = mar = m(r̈−rω²)</div>
+      <div class="f">ΣFθ = maθ = m(rα+2ṙω)</div>
+      <div class="f">ΣFz = maz</div>
+      <details>
+        <summary>Details</summary>
+        <div class="note">Useful when position or constraints are naturally expressed with radial distance r and angle θ — a rod, arm, or slot problem.</div>
+        <hr>
+        <div class="method">Orbital Mechanics — §14.5</div>
+        <div class="f">ΣFr = −GMm/r²&nbsp; (gravity is the only radial force)</div>
+        <div class="note">Same polar equations of motion; the central force being purely radial (ΣFθ = 0) is what produces a conic-section orbit.</div>
+      </details>
+    </div>
+  </div>
+
+</div>
+
+<footer class="guidance">
+  <div class="t">Choose the coordinate system from what the problem hands you — not from habit.</div>
+  <div>• Cartesian: forces/acceleration already along fixed axes, or a straight-line problem.</div>
+  <div>• Normal–tangential: you know the path's curvature and care about speed vs. direction.</div>
+  <div>• Polar/cylindrical: a rod, arm, slot, or a central (gravity-like) force defines the motion.</div>
+</footer>
+
+<script>
+(function(){
+  var svg = document.getElementById('connectors');
+  var stage = document.getElementById('stage');
+  var NS = 'http://www.w3.org/2000/svg';
+
+  function isMobile(){ return window.matchMedia('(max-width:760px)').matches; }
+
+  function line(x1,y1,x2,y2){
+    var p = document.createElementNS(NS,'path');
+    p.setAttribute('d', 'M'+x1+','+y1+' L'+x2+','+y2);
+    svg.appendChild(p);
+  }
+  function centerX(rect, stageRect){ return rect.left + rect.width/2 - stageRect.left; }
+
+  function draw(){
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    if (isMobile()) return;
+
+    var stageRect = stage.getBoundingClientRect();
+    svg.setAttribute('width', stageRect.width);
+    svg.setAttribute('height', stage.scrollHeight);
+    svg.setAttribute('viewBox', '0 0 ' + stageRect.width + ' ' + stage.scrollHeight);
+
+    var byParent = {};
+    stage.querySelectorAll('.node[data-parent]').forEach(function(el){
+      var pid = el.dataset.parent;
+      (byParent[pid] = byParent[pid] || []).push(el);
+    });
+
+    Object.keys(byParent).forEach(function(pid){
+      var parent = document.getElementById(pid);
+      if (!parent) return;
+      var pRect = parent.getBoundingClientRect();
+      var px = centerX(pRect, stageRect);
+      var curY = pRect.bottom - stageRect.top;
+
+      var kids = byParent[pid].slice();
+      kids.sort(function(a,b){
+        var ar=a.getBoundingClientRect(), br=b.getBoundingClientRect();
+        return Math.abs(ar.top-br.top)>4 ? ar.top-br.top : ar.left-br.left;
+      });
+      var visualRows=[];
+      kids.forEach(function(el){
+        var top=el.getBoundingClientRect().top;
+        var row=visualRows.find(function(r){return Math.abs(r.top-top)<6;});
+        if(row){row.els.push(el);}else{visualRows.push({top:top,els:[el]});}
+      });
+
+      visualRows.forEach(function(row){
+        var els = row.els;
+        var rects = els.map(function(el){ return el.getBoundingClientRect(); });
+        var tops = rects.map(function(r){ return r.top - stageRect.top; });
+        var railY = Math.min.apply(null, tops) - 14;
+
+        line(px, curY, px, railY);
+
+        var xs = rects.map(function(r){ return centerX(r, stageRect); });
+        if (xs.length > 1){
+          line(Math.min.apply(null, xs), railY, Math.max.apply(null, xs), railY);
+        }
+        els.forEach(function(el, i){
+          var cx = xs[i], cy = tops[i];
+          line(cx, railY, cx, cy);
+        });
+
+        curY = railY;
+      });
+    });
+  }
+
+  var printStates=[];
+  window.addEventListener('beforeprint', function(){
+    printStates=Array.from(document.querySelectorAll('details')).map(function(d){return d.open;});
+    document.querySelectorAll('details').forEach(function(d){d.open=true;});
+    draw();
+  });
+  window.addEventListener('afterprint', function(){
+    document.querySelectorAll('details').forEach(function(d,i){d.open=!!printStates[i];});
+    draw();
+  });
+
+  window.addEventListener('load', draw);
+  window.addEventListener('resize', function(){ requestAnimationFrame(draw); });
+  document.addEventListener('toggle', function(){ requestAnimationFrame(draw); }, true);
+  if (document.fonts && document.fonts.ready){ document.fonts.ready.then(draw); }
+  document.addEventListener('DOMContentLoaded', draw);
+  setTimeout(draw, 50);
+  setTimeout(draw, 300);
+})();
+</script>
+
+</body>
+</html>
