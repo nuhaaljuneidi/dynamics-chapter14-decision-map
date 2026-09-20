@@ -283,9 +283,7 @@
         line(px, curY, px, railY);
 
         var xs = rects.map(function(r){ return centerX(r, stageRect); });
-        if (xs.length > 1){
-          line(Math.min.apply(null, xs), railY, Math.max.apply(null, xs), railY);
-        }
+        line(Math.min.apply(null, xs.concat([px])), railY, Math.max.apply(null, xs.concat([px])), railY);
         els.forEach(function(el, i){
           var cx = xs[i], cy = tops[i];
           line(cx, railY, cx, cy);
