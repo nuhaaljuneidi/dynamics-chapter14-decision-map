@@ -165,7 +165,7 @@
 
   <!-- LEVEL 2: which coordinate system -->
   <div class="level" data-depth="2">
-    <div class="node parent2" data-depth="2" data-parent="n-one" id="n-coord">
+    <div class="node parent2" data-depth="2" data-parent="n-one n-system" id="n-coord">
       <div class="t">Which coordinate system fits the motion?</div>
       <div class="sub">Free-body diagram = kinetic diagram, resolved the same way</div>
     </div>
@@ -251,8 +251,9 @@
 
     var byParent = {};
     stage.querySelectorAll('.node[data-parent]').forEach(function(el){
-      var pid = el.dataset.parent;
-      (byParent[pid] = byParent[pid] || []).push(el);
+      el.dataset.parent.split(/\s+/).forEach(function(pid){
+        (byParent[pid] = byParent[pid] || []).push(el);
+      });
     });
 
     Object.keys(byParent).forEach(function(pid){
